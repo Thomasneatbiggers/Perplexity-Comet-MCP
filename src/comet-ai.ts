@@ -346,23 +346,24 @@ export class CometAI {
         // Determine status with improved logic
         let status = 'idle';
 
-        // Working indicators (in priority order)
+        // FIRST: Check if actively working (stop button is the strongest indicator)
         if (hasActiveStopButton) {
           status = 'working';
         } else if (hasLoadingSpinner || hasThinkingIndicator) {
           status = 'working';
-        } else if (hasWorkingText && !hasAskFollowUp) {
-          status = 'working';
         }
-        // Completion indicators
+        // SECOND: Check completion indicators BEFORE working text
+        // (because completed pages still show historical step text)
         else if (hasStepsCompleted || hasFinishedMarker) {
           status = 'completed';
-        } else if (hasReviewedSources && !hasWorkingText) {
+        } else if (hasAskFollowUp && hasProseContent) {
           status = 'completed';
-        } else if (hasWorkingText) {
+        } else if (hasReviewedSources && !hasActiveStopButton) {
+          status = 'completed';
+        }
+        // THIRD: Fall back to working text patterns (only if no completion signals)
+        else if (hasWorkingText) {
           status = 'working';
-        } else if (hasAskFollowUp && hasProseContent && !hasActiveStopButton) {
-          status = 'completed';
         }
 
         // Extract steps
