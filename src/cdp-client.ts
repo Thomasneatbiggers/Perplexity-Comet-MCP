@@ -48,6 +48,19 @@ async function windowsFetch(url: string, method: string = 'GET'): Promise<{ ok: 
   }
 }
 
+// Detect if running in WSL
+function isWSL(): boolean {
+  if (platform() !== 'linux') return false;
+  try {
+    const release = execSync('uname -r', { encoding: 'utf8' }).toLowerCase();
+    return release.includes('microsoft') || release.includes('wsl');
+  } catch {
+    return false;
+  }
+}
+
+const IS_WSL = isWSL();
+
 // Detect platform and set appropriate Comet path
 function getCometPath(): string {
   const os = platform();
@@ -59,8 +72,9 @@ function getCometPath(): string {
 
   if (os === "darwin") {
     return "/Applications/Comet.app/Contents/MacOS/Comet";
-  } else if (os === "win32") {
+  } else if (os === "win32" || IS_WSL) {
     // Common Windows installation paths for Comet (Perplexity)
+    // For WSL, these paths won't be directly usable but we track them for reference
     const possiblePaths = [
       `${process.env.LOCALAPPDATA}\\Perplexity\\Comet\\Application\\comet.exe`,
       `${process.env.APPDATA}\\Perplexity\\Comet\\Application\\comet.exe`,
@@ -83,7 +97,7 @@ function getCometPath(): string {
 }
 
 const COMET_PATH = getCometPath();
-const IS_WINDOWS = platform() === "win32";
+const IS_WINDOWS = platform() === "win32" || IS_WSL;
 const DEFAULT_PORT = 9223;
 
 export class CometCDPClient {
@@ -682,7 +696,71 @@ export class CometCDPClient {
   async startComet(port: number = DEFAULT_PORT): Promise<string> {
     this.state.port = port;
 
-    // On Windows, try direct WebSocket connection first (bypasses HTTP issues)
+    // On WSL, try to connect first, then launch via PowerShell if needed
+    if (IS_WSL) {
+      try {
+        // Try to connect directly via CDP WebSocket to Windows host
+        const testClient = await CDP({ port, host: '127.0.0.1' });
+        await testClient.close();
+        return `Connected to Comet on Windows host, port: ${port}`;
+      } catch {
+        // Try to launch Comet via PowerShell on Windows
+        console.error('Comet not accessible, attempting to launch via PowerShell...');
+
+        // Get Windows user's LOCALAPPDATA path
+        let cometPath = '';
+        try {
+          const localAppData = execSync('cmd.exe /c echo %LOCALAPPDATA%', { encoding: 'utf8' }).trim().replace(/\r?\n/g, '');
+          cometPath = `${localAppData}\\Perplexity\\Comet\\Application\\Comet.exe`;
+        } catch {
+          cometPath = 'C:\\Users\\' + (process.env.USER || 'user') + '\\AppData\\Local\\Perplexity\\Comet\\Application\\Comet.exe';
+        }
+
+        try {
+          // Launch Comet via PowerShell
+          const psCommand = `Start-Process -FilePath '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'`;
+          spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
+            detached: true,
+            stdio: 'ignore',
+          }).unref();
+
+          // Wait for Comet to start
+          return new Promise((resolve, reject) => {
+            const maxAttempts = 40;
+            let attempts = 0;
+
+            const checkReady = async () => {
+              attempts++;
+              try {
+                const testClient = await CDP({ port, host: '127.0.0.1' });
+                await testClient.close();
+                resolve(`Comet started via WSL->PowerShell on port ${port}`);
+                return;
+              } catch { /* keep trying */ }
+
+              if (attempts < maxAttempts) {
+                setTimeout(checkReady, 500);
+              } else {
+                reject(new Error(
+                  `Timeout waiting for Comet. Tried to launch: ${cometPath}\n` +
+                  `Try manually: powershell.exe -Command "Start-Process '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'"`
+                ));
+              }
+            };
+
+            setTimeout(checkReady, 2000);
+          });
+        } catch (launchError) {
+          throw new Error(
+            `Cannot connect to or launch Comet browser.\n` +
+            `Tried path: ${cometPath}\n` +
+            `Error: ${launchError instanceof Error ? launchError.message : String(launchError)}`
+          );
+        }
+      }
+    }
+
+    // On Windows (native), try direct WebSocket connection first (bypasses HTTP issues)
     if (IS_WINDOWS) {
       try {
         // Try to connect directly via CDP WebSocket

@@ -1,6 +1,6 @@
 {
   "name": "perplexity-comet-mcp",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "mcpName": "io.github.RapierCraft/perplexity-comet-mcp",
   "description": "Production-grade MCP server bridging Claude Code with Perplexity Comet browser - Windows support, tab management, smart completion detection",
   "main": "dist/index.js",
