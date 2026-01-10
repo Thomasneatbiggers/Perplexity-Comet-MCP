@@ -14,6 +14,60 @@ import {
 import { cometClient } from "./cdp-client.js";
 import { cometAI } from "./comet-ai.js";
 
+// Session state for tracking task progress and preventing stale responses
+interface SessionState {
+  currentTaskId: string | null;
+  taskStartTime: number | null;
+  lastPrompt: string | null;
+  lastResponse: string | null;
+  lastResponseTime: number | null;
+  steps: string[];
+  isActive: boolean;
+}
+
+const sessionState: SessionState = {
+  currentTaskId: null,
+  taskStartTime: null,
+  lastPrompt: null,
+  lastResponse: null,
+  lastResponseTime: null,
+  steps: [],
+  isActive: false,
+};
+
+// Helper to generate task ID
+function generateTaskId(): string {
+  return `task_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+}
+
+// Helper to reset session for new task
+function startNewTask(prompt: string): string {
+  const taskId = generateTaskId();
+  sessionState.currentTaskId = taskId;
+  sessionState.taskStartTime = Date.now();
+  sessionState.lastPrompt = prompt;
+  sessionState.lastResponse = null;
+  sessionState.lastResponseTime = null;
+  sessionState.steps = [];
+  sessionState.isActive = true;
+  cometAI.resetStabilityTracking();
+  return taskId;
+}
+
+// Helper to complete task
+function completeTask(response: string): void {
+  sessionState.lastResponse = response;
+  sessionState.lastResponseTime = Date.now();
+  sessionState.isActive = false;
+}
+
+// Helper to check if session is stale
+function isSessionStale(): boolean {
+  if (!sessionState.taskStartTime) return true;
+  // Consider session stale if no activity for 5 minutes
+  return Date.now() - sessionState.taskStartTime > 5 * 60 * 1000;
+}
+
 const TOOLS: Tool[] = [
   {
     name: "comet_connect",
@@ -27,8 +81,9 @@ const TOOLS: Tool[] = [
       type: "object",
       properties: {
         prompt: { type: "string", description: "Question or task for Comet - focus on goals and context" },
+        context: { type: "string", description: "Optional context to include (e.g., file contents, codebase info, marketing guidelines). This will be prefixed to the prompt to give Comet full context." },
         newChat: { type: "boolean", description: "Start a fresh conversation (default: false)" },
-        timeout: { type: "number", description: "Max wait time in ms (default: 15000 = 15s)" },
+        timeout: { type: "number", description: "Max wait time in ms (default: 120000 = 2min)" },
       },
       required: ["prompt"],
     },
@@ -124,29 +179,47 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // Auto-start Comet with debug port (will restart if running without it)
         const startResult = await cometClient.startComet(9223);
 
-        // Get all tabs and clean up - close all except one
+        // Get all tabs - only clean up blank/empty tabs, preserve browsing tabs
         const targets = await cometClient.listTargets();
         const pageTabs = targets.filter(t => t.type === 'page');
 
-        // Close extra tabs, keep only one
-        if (pageTabs.length > 1) {
-          for (let i = 1; i < pageTabs.length; i++) {
+        // Only close truly blank/empty tabs, preserve all others
+        let closedCount = 0;
+        const blankTabs = pageTabs.filter(t =>
+          t.url === 'about:blank' ||
+          t.url === '' ||
+          t.url === 'chrome://newtab/'
+        );
+
+        for (const tab of blankTabs) {
+          // Don't close if it's the only tab
+          const currentTabs = await cometClient.listTargets();
+          if (currentTabs.filter(t => t.type === 'page').length > 1) {
             try {
-              await cometClient.closeTab(pageTabs[i].id);
+              await cometClient.closeTab(tab.id);
+              closedCount++;
             } catch { /* ignore */ }
           }
         }
 
         // Get fresh tab list
         const freshTargets = await cometClient.listTargets();
-        const anyPage = freshTargets.find(t => t.type === 'page');
+
+        // Prefer connecting to existing Perplexity tab, or any page tab
+        const perplexityTab = freshTargets.find(t => t.type === 'page' && t.url.includes('perplexity.ai'));
+        const anyPage = perplexityTab || freshTargets.find(t => t.type === 'page');
 
         if (anyPage) {
           await cometClient.connect(anyPage.id);
-          // Always navigate to Perplexity home for clean state
-          await cometClient.navigate("https://www.perplexity.ai/", true);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return { content: [{ type: "text", text: `${startResult}\nConnected to Perplexity (cleaned ${pageTabs.length - 1} old tabs)` }] };
+
+          // Only navigate to Perplexity if not already there
+          if (!anyPage.url.includes('perplexity.ai')) {
+            await cometClient.navigate("https://www.perplexity.ai/", true);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
+
+          const cleanupMsg = closedCount > 0 ? ` (cleaned ${closedCount} blank tabs)` : '';
+          return { content: [{ type: "text", text: `${startResult}\nConnected to Perplexity${cleanupMsg}` }] };
         }
 
         // No tabs at all - create a new one
@@ -158,6 +231,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "comet_ask": {
         let prompt = args?.prompt as string;
+        const context = args?.context as string | undefined;
         const maxTimeout = (args?.timeout as number) || 120000; // Max 2 minutes safety net
         const newChat = (args?.newChat as boolean) || false;
 
@@ -165,6 +239,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!prompt || prompt.trim().length === 0) {
           return { content: [{ type: "text", text: "Error: prompt cannot be empty" }] };
         }
+
+        // If context is provided, prepend it to the prompt
+        if (context && context.trim().length > 0) {
+          // Format context as a clear prefix
+          const contextPrefix = `Context for this task:\n\`\`\`\n${context.trim()}\n\`\`\`\n\nBased on the above context, `;
+          prompt = contextPrefix + prompt;
+        }
+
+        // Start new task session - resets state and prevents stale poll responses
+        const taskId = startNewTask(prompt);
 
         // CRITICAL: Pre-operation connection check for one-shot reliability
         try {
@@ -341,15 +425,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               }
             }
 
+            // Track steps in session state
+            sessionState.steps = stepsCollected;
+
             // COMPLETION CONDITIONS (return immediately when any are met):
 
             // 1. Explicit completion detected by status checker
             if (status.status === 'completed' && sawNewResponse && status.response) {
+              completeTask(status.response);
               return { content: [{ type: "text", text: status.response }] };
             }
 
             // 2. Response is stable (same content for 2+ polls) and no stop button
             if (status.isStable && sawNewResponse && status.response && !status.hasStopButton) {
+              completeTask(status.response);
               return { content: [{ type: "text", text: status.response }] };
             }
 
@@ -357,6 +446,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             const idleTime = Date.now() - lastActivityTime;
             if (idleTime > IDLE_TIMEOUT && sawNewResponse && status.response &&
                 status.response.length > 100 && !status.hasStopButton) {
+              completeTask(status.response);
               return { content: [{ type: "text", text: status.response }] };
             }
           } catch (pollError) {
@@ -392,10 +482,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // Max timeout reached - return whatever we have
         const finalStatus = await cometAI.getAgentStatus();
         if (finalStatus.response && finalStatus.response.length > 50) {
+          completeTask(finalStatus.response);
           return { content: [{ type: "text", text: finalStatus.response }] };
         }
 
-        // No response - return progress info
+        // No response - return progress info (task still active)
         let inProgressMsg = `Task may still be in progress (max timeout reached).\n`;
         inProgressMsg += `Status: ${finalStatus.status.toUpperCase()}\n`;
         if (finalStatus.currentStep) {
@@ -406,21 +497,45 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
         inProgressMsg += `\nUse comet_poll to check progress or comet_stop to cancel.`;
 
+        // Keep task active since it may still be running
+        sessionState.steps = stepsCollected;
         return { content: [{ type: "text", text: inProgressMsg }] };
       }
 
       case "comet_poll": {
-        // Ensure we're on Perplexity tab for accurate status
+        // Check if there's an active task session
+        if (!sessionState.isActive && !sessionState.currentTaskId) {
+          return { content: [{ type: "text", text: "Status: IDLE\nNo active task. Use comet_ask to start a new task." }] };
+        }
+
+        // Check for stale session (no activity for 5+ minutes)
+        if (isSessionStale() && !sessionState.isActive) {
+          return { content: [{ type: "text", text: "Status: IDLE\nPrevious task session expired. Use comet_ask to start a new task." }] };
+        }
+
+        // If task was already completed, return the cached response
+        if (!sessionState.isActive && sessionState.lastResponse) {
+          const timeSinceComplete = sessionState.lastResponseTime
+            ? Math.round((Date.now() - sessionState.lastResponseTime) / 1000)
+            : 0;
+          return { content: [{ type: "text", text: `Status: COMPLETED (${timeSinceComplete}s ago)\n\n${sessionState.lastResponse}` }] };
+        }
+
+        // Active task - get fresh status from Perplexity
         await cometClient.ensureOnPerplexityTab();
         const status = await cometAI.getAgentStatus();
 
-        // If completed, return the response directly (most useful case)
+        // If completed, update session state and return response
         if (status.status === 'completed' && status.response) {
+          completeTask(status.response);
           return { content: [{ type: "text", text: status.response }] };
         }
 
         // Still working - return progress info
         let output = `Status: ${status.status.toUpperCase()}\n`;
+        if (sessionState.currentTaskId) {
+          output += `Task: ${sessionState.currentTaskId}\n`;
+        }
 
         if (status.agentBrowsingUrl) {
           output += `Browsing: ${status.agentBrowsingUrl}\n`;
@@ -430,11 +545,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           output += `Current: ${status.currentStep}\n`;
         }
 
-        if (status.steps.length > 0) {
-          output += `\nSteps:\n${status.steps.map(s => `  • ${s}`).join('\n')}\n`;
+        // Combine session steps with current status steps
+        const allSteps = [...new Set([...sessionState.steps, ...status.steps])];
+        if (allSteps.length > 0) {
+          output += `\nSteps:\n${allSteps.map(s => `  • ${s}`).join('\n')}\n`;
         }
 
-        if (status.status === 'working') {
+        if (status.status === 'working' || sessionState.isActive) {
           output += `\n[Use comet_stop to interrupt, or comet_screenshot to see current page]`;
         }
 
@@ -443,6 +560,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "comet_stop": {
         const stopped = await cometAI.stopAgent();
+        if (stopped) {
+          sessionState.isActive = false;
+        }
         return {
           content: [{
             type: "text",

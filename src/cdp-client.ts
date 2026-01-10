@@ -920,6 +920,55 @@ export class CometCDPClient {
   }
 
   /**
+   * Navigate to a URL with automatic retry on failure
+   * @param url - URL to navigate to
+   * @param maxRetries - Maximum number of retry attempts (default: 3)
+   * @param retryDelay - Delay between retries in ms (default: 1000)
+   */
+  async navigateWithRetry(url: string, maxRetries: number = 3, retryDelay: number = 1000): Promise<{ success: boolean; url: string; attempts: number; error?: string }> {
+    let lastError: string = '';
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.withAutoReconnect(async () => {
+          this.ensureConnected();
+          const result = await this.client!.Page.navigate({ url });
+
+          // Check if navigation succeeded
+          if (result.errorText) {
+            throw new Error(result.errorText);
+          }
+
+          // Wait for load with timeout
+          await Promise.race([
+            this.client!.Page.loadEventFired(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Page load timeout')), 15000))
+          ]);
+
+          this.state.currentUrl = url;
+        });
+
+        return { success: true, url, attempts: attempt };
+      } catch (error: any) {
+        lastError = error.message || String(error);
+
+        // Don't retry for certain errors
+        if (lastError.includes('net::ERR_NAME_NOT_RESOLVED') ||
+            lastError.includes('net::ERR_INVALID_URL')) {
+          return { success: false, url, attempts: attempt, error: lastError };
+        }
+
+        // Wait before retry
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
+        }
+      }
+    }
+
+    return { success: false, url, attempts: maxRetries, error: lastError };
+  }
+
+  /**
    * Capture screenshot
    */
   async screenshot(format: "png" | "jpeg" = "png"): Promise<ScreenshotResult> {
