@@ -401,6 +401,37 @@ set COMET_PATH=%LOCALAPPDATA%\Perplexity\Comet\Application\comet.exe
 
 ---
 
+### WSL-Specific Issues
+
+**Problem:** `WSL cannot connect to Windows localhost:9223`
+
+**Explanation:** WSL2 uses a separate network namespace by default. The MCP uses Chrome DevTools Protocol (CDP) which requires WebSocket connections to Windows localhost.
+
+**Solution:** Enable WSL mirrored networking:
+
+1. Create or edit `%USERPROFILE%\.wslconfig` (e.g., `C:\Users\YourName\.wslconfig`):
+```ini
+[wsl2]
+networkingMode=mirrored
+```
+
+2. Restart WSL:
+```powershell
+wsl --shutdown
+```
+
+3. Open a new WSL terminal and try again.
+
+**Alternative:** Run Claude Code from Windows PowerShell instead of WSL.
+
+---
+
+**Problem:** `UNC paths are not supported` warnings
+
+**Explanation:** This is a benign warning from PowerShell when launched from WSL. The MCP handles this automatically.
+
+---
+
 ### Tab Management Issues
 
 **Problem:** `Cannot close - this is the only browsing tab`

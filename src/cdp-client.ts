@@ -15,23 +15,81 @@ import type {
   TabContext,
 } from "./types.js";
 
-// Windows-compatible fetch using PowerShell (Node.js fetch has issues with Comet)
+// Detect if running in WSL (must be before windowsFetch)
+function isWSL(): boolean {
+  if (platform() !== 'linux') return false;
+  try {
+    const release = execSync('uname -r', { encoding: 'utf8' }).toLowerCase();
+    return release.includes('microsoft') || release.includes('wsl');
+  } catch {
+    return false;
+  }
+}
+
+const IS_WSL = isWSL();
+
+// Check if WSL can directly connect to Windows localhost (mirrored networking)
+async function canConnectToWindowsLocalhost(port: number): Promise<boolean> {
+  if (!IS_WSL) return true;
+
+  const net = await import('net');
+  return new Promise((resolve) => {
+    const client = net.createConnection({ port, host: '127.0.0.1' }, () => {
+      client.destroy();
+      resolve(true);
+    });
+    client.on('error', () => {
+      resolve(false);
+    });
+    client.setTimeout(2000, () => {
+      client.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// For WSL: port to use for CDP connection
+async function getWSLConnectPort(targetPort: number): Promise<number> {
+  if (!IS_WSL) return targetPort;
+
+  // Check if mirrored networking is enabled (direct localhost access works)
+  const canConnect = await canConnectToWindowsLocalhost(targetPort);
+  if (canConnect) {
+    return targetPort;
+  }
+
+  // Cannot connect - throw helpful error
+  throw new Error(
+    `WSL cannot connect to Windows localhost:${targetPort}.\n\n` +
+    `To fix this, enable WSL mirrored networking:\n` +
+    `1. Create/edit %USERPROFILE%\\.wslconfig with:\n` +
+    `   [wsl2]\n` +
+    `   networkingMode=mirrored\n` +
+    `2. Run: wsl --shutdown\n` +
+    `3. Restart WSL and try again\n\n` +
+    `Alternatively, run Claude Code from Windows PowerShell instead of WSL.`
+  );
+}
+
+// Windows/WSL-compatible fetch using PowerShell
+// On WSL, native fetch connects to WSL's localhost, not Windows where Comet runs
 async function windowsFetch(url: string, method: string = 'GET'): Promise<{ ok: boolean; status: number; json: () => Promise<any> }> {
-  if (platform() !== 'win32') {
-    // Use native fetch on non-Windows
+  // Use native fetch only on non-Windows AND non-WSL
+  if (platform() !== 'win32' && !IS_WSL) {
     const response = await fetch(url, { method });
     return response;
   }
 
+  // On Windows or WSL, use PowerShell to reach Windows localhost
   try {
     const psCommand = method === 'PUT'
       ? `Invoke-WebRequest -Uri '${url}' -Method PUT -UseBasicParsing | Select-Object -ExpandProperty Content`
       : `Invoke-WebRequest -Uri '${url}' -UseBasicParsing | Select-Object -ExpandProperty Content`;
 
-    const result = execSync(`powershell -Command "${psCommand}"`, {
+    const result = execSync(`powershell.exe -NoProfile -Command "${psCommand}"`, {
       encoding: 'utf8',
-      timeout: 5000,
-      windowsHide: true
+      timeout: 10000,
+      windowsHide: true,
     });
 
     return {
@@ -47,19 +105,6 @@ async function windowsFetch(url: string, method: string = 'GET'): Promise<{ ok: 
     };
   }
 }
-
-// Detect if running in WSL
-function isWSL(): boolean {
-  if (platform() !== 'linux') return false;
-  try {
-    const release = execSync('uname -r', { encoding: 'utf8' }).toLowerCase();
-    return release.includes('microsoft') || release.includes('wsl');
-  } catch {
-    return false;
-  }
-}
-
-const IS_WSL = isWSL();
 
 // Detect platform and set appropriate Comet path
 function getCometPath(): string {
@@ -696,67 +741,73 @@ export class CometCDPClient {
   async startComet(port: number = DEFAULT_PORT): Promise<string> {
     this.state.port = port;
 
-    // On WSL, try to connect first, then launch via PowerShell if needed
+    // On WSL, use HTTP via PowerShell (WebSocket doesn't work across WSL/Windows boundary)
     if (IS_WSL) {
+      // Check if Comet is already running with debug port via HTTP
       try {
-        // Try to connect directly via CDP WebSocket to Windows host
-        const testClient = await CDP({ port, host: '127.0.0.1' });
-        await testClient.close();
-        return `Connected to Comet on Windows host, port: ${port}`;
-      } catch {
-        // Try to launch Comet via PowerShell on Windows
-        console.error('Comet not accessible, attempting to launch via PowerShell...');
-
-        // Get Windows user's LOCALAPPDATA path
-        let cometPath = '';
-        try {
-          const localAppData = execSync('cmd.exe /c echo %LOCALAPPDATA%', { encoding: 'utf8' }).trim().replace(/\r?\n/g, '');
-          cometPath = `${localAppData}\\Perplexity\\Comet\\Application\\Comet.exe`;
-        } catch {
-          cometPath = 'C:\\Users\\' + (process.env.USER || 'user') + '\\AppData\\Local\\Perplexity\\Comet\\Application\\Comet.exe';
+        const response = await windowsFetch(`http://127.0.0.1:${port}/json/version`);
+        if (response.ok) {
+          const version = await response.json() as CDPVersion;
+          return `Comet already running on Windows host, port: ${port} (${version.Browser})`;
         }
+      } catch {
+        // Comet not accessible, need to launch
+      }
 
-        try {
-          // Launch Comet via PowerShell
-          const psCommand = `Start-Process -FilePath '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'`;
-          spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
-            detached: true,
-            stdio: 'ignore',
-          }).unref();
+      // Try to launch Comet via PowerShell on Windows
+      console.error('Comet not accessible, attempting to launch via PowerShell...');
 
-          // Wait for Comet to start
-          return new Promise((resolve, reject) => {
-            const maxAttempts = 40;
-            let attempts = 0;
+      // Get Windows user's LOCALAPPDATA path
+      let cometPath = '';
+      try {
+        const localAppData = execSync('cmd.exe /c echo %LOCALAPPDATA%', { encoding: 'utf8' }).trim().replace(/\r?\n/g, '');
+        cometPath = `${localAppData}\\Perplexity\\Comet\\Application\\Comet.exe`;
+      } catch {
+        cometPath = 'C:\\Users\\' + (process.env.USER || 'user') + '\\AppData\\Local\\Perplexity\\Comet\\Application\\Comet.exe';
+      }
 
-            const checkReady = async () => {
-              attempts++;
-              try {
-                const testClient = await CDP({ port, host: '127.0.0.1' });
-                await testClient.close();
+      try {
+        // Launch Comet via PowerShell
+        // Use Set-Location to avoid UNC path issues when running from WSL
+        const psCommand = `Set-Location C:\\; Start-Process -FilePath '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'`;
+        spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
+          detached: true,
+          stdio: 'ignore',
+        }).unref();
+
+        // Wait for Comet to start - use HTTP check via PowerShell
+        return new Promise((resolve, reject) => {
+          const maxAttempts = 40;
+          let attempts = 0;
+
+          const checkReady = async () => {
+            attempts++;
+            try {
+              const response = await windowsFetch(`http://127.0.0.1:${port}/json/version`);
+              if (response.ok) {
                 resolve(`Comet started via WSL->PowerShell on port ${port}`);
                 return;
-              } catch { /* keep trying */ }
-
-              if (attempts < maxAttempts) {
-                setTimeout(checkReady, 500);
-              } else {
-                reject(new Error(
-                  `Timeout waiting for Comet. Tried to launch: ${cometPath}\n` +
-                  `Try manually: powershell.exe -Command "Start-Process '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'"`
-                ));
               }
-            };
+            } catch { /* keep trying */ }
 
-            setTimeout(checkReady, 2000);
-          });
-        } catch (launchError) {
-          throw new Error(
-            `Cannot connect to or launch Comet browser.\n` +
-            `Tried path: ${cometPath}\n` +
-            `Error: ${launchError instanceof Error ? launchError.message : String(launchError)}`
-          );
-        }
+            if (attempts < maxAttempts) {
+              setTimeout(checkReady, 500);
+            } else {
+              reject(new Error(
+                `Timeout waiting for Comet. Tried to launch: ${cometPath}\n` +
+                `Try manually: powershell.exe -Command "Start-Process '${cometPath}' -ArgumentList '--remote-debugging-port=${port}'"`
+              ));
+            }
+          };
+
+          setTimeout(checkReady, 2000);
+        });
+      } catch (launchError) {
+        throw new Error(
+          `Cannot connect to or launch Comet browser.\n` +
+          `Tried path: ${cometPath}\n` +
+          `Error: ${launchError instanceof Error ? launchError.message : String(launchError)}`
+        );
       }
     }
 
@@ -903,14 +954,20 @@ export class CometCDPClient {
    * List all available tabs/targets
    */
   async listTargets(): Promise<CDPTarget[]> {
-    // On Windows, use CDP Target.getTargets() to avoid HTTP issues
+    // On WSL, use HTTP via PowerShell (WebSocket doesn't work across WSL/Windows boundary)
+    if (IS_WSL) {
+      const response = await windowsFetch(`http://127.0.0.1:${this.state.port}/json/list`);
+      if (!response.ok) throw new Error(`Failed to list targets: ${response.status}`);
+      return response.json() as Promise<CDPTarget[]>;
+    }
+
+    // On native Windows (not WSL), use CDP Target.getTargets() to avoid HTTP issues
     if (IS_WINDOWS) {
       try {
         const tempClient = await CDP({ port: this.state.port, host: '127.0.0.1' });
         const { targetInfos } = await (tempClient as any).Target.getTargets();
         await tempClient.close();
 
-        // Convert targetInfos to CDPTarget format
         return targetInfos.map((t: any) => ({
           id: t.targetId,
           type: t.type,
@@ -923,6 +980,7 @@ export class CometCDPClient {
       }
     }
 
+    // Fallback for other platforms (macOS, Linux)
     const response = await windowsFetch(`http://127.0.0.1:${this.state.port}/json/list`);
     if (!response.ok) throw new Error(`Failed to list targets: ${response.status}`);
     return response.json() as Promise<CDPTarget[]>;
@@ -936,7 +994,10 @@ export class CometCDPClient {
       await this.disconnect();
     }
 
-    const options: CDP.Options = { port: this.state.port };
+    // On WSL, check if we can connect directly (mirrored networking required)
+    const connectPort = await getWSLConnectPort(this.state.port);
+
+    const options: CDP.Options = { port: connectPort, host: '127.0.0.1' };
     if (targetId) options.target = targetId;
 
     this.client = await CDP(options);

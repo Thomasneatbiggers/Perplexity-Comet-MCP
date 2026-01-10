@@ -179,31 +179,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         // Auto-start Comet with debug port (will restart if running without it)
         const startResult = await cometClient.startComet(9223);
 
-        // Get all tabs - only clean up blank/empty tabs, preserve browsing tabs
+        // Get all tabs - DON'T clean up tabs, as closing them can crash Comet
         const targets = await cometClient.listTargets();
-        const pageTabs = targets.filter(t => t.type === 'page');
-
-        // Only close truly blank/empty tabs, preserve all others
-        let closedCount = 0;
-        const blankTabs = pageTabs.filter(t =>
-          t.url === 'about:blank' ||
-          t.url === '' ||
-          t.url === 'chrome://newtab/'
-        );
-
-        for (const tab of blankTabs) {
-          // Don't close if it's the only tab
-          const currentTabs = await cometClient.listTargets();
-          if (currentTabs.filter(t => t.type === 'page').length > 1) {
-            try {
-              await cometClient.closeTab(tab.id);
-              closedCount++;
-            } catch { /* ignore */ }
-          }
-        }
-
-        // Get fresh tab list
-        const freshTargets = await cometClient.listTargets();
+        const freshTargets = targets; // Use the same list, no cleanup
 
         // Prefer connecting to existing Perplexity tab, or any page tab
         const perplexityTab = freshTargets.find(t => t.type === 'page' && t.url.includes('perplexity.ai'));
@@ -218,8 +196,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             await new Promise(resolve => setTimeout(resolve, 1500));
           }
 
-          const cleanupMsg = closedCount > 0 ? ` (cleaned ${closedCount} blank tabs)` : '';
-          return { content: [{ type: "text", text: `${startResult}\nConnected to Perplexity${cleanupMsg}` }] };
+          return { content: [{ type: "text", text: `${startResult}\nConnected to Perplexity` }] };
         }
 
         // No tabs at all - create a new one
