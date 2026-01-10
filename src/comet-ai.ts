@@ -322,14 +322,15 @@ export class CometAI {
         const hasStepsCompleted = /\\d+ steps? completed/i.test(body);
         const hasFinishedMarker = body.includes('Finished') && !hasActiveStopButton;
         const hasReviewedSources = /Reviewed \\d+ sources?/i.test(body);
+        const hasSourcesIndicator = /\\d+\\s*sources?/i.test(body); // "10 sources" etc
         const hasAskFollowUp = body.includes('Ask a follow-up') || body.includes('Ask follow-up');
 
-        // Check for substantial prose content (actual response)
+        // Check for prose content (actual response) - lowered threshold for short answers
         const proseEls = [...document.querySelectorAll('[class*="prose"]')];
         const hasProseContent = proseEls.some(el => {
           const text = el.innerText.trim();
-          // Must have substantial content, not just UI text
-          return text.length > 50 && !text.startsWith('Library') && !text.startsWith('Discover');
+          // Must have some content, not just UI text (lowered from 50 to 15 for short answers)
+          return text.length > 15 && !text.startsWith('Library') && !text.startsWith('Discover');
         });
 
         // Check if input is focused (user might be typing, not agent working)
@@ -357,6 +358,8 @@ export class CometAI {
         else if (hasStepsCompleted || hasFinishedMarker) {
           status = 'completed';
         } else if (hasAskFollowUp && hasProseContent) {
+          status = 'completed';
+        } else if (hasSourcesIndicator && hasProseContent && !hasActiveStopButton) {
           status = 'completed';
         } else if (hasReviewedSources && !hasActiveStopButton) {
           status = 'completed';
