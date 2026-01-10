@@ -998,6 +998,235 @@ export class CometCDPClient {
       throw new Error("Not connected to Comet. Call connect() first.");
     }
   }
+
+  /**
+   * Upload a file to a file input element on the page
+   * Uses CDP DOM.setFileInputFiles to inject file into input
+   *
+   * @param filePath - Absolute path to the file to upload
+   * @param selector - Optional CSS selector for the file input (auto-detects if not provided)
+   * @returns Result with success status and details
+   */
+  async uploadFile(filePath: string, selector?: string): Promise<{ success: boolean; message: string; inputFound: boolean }> {
+    return this.withAutoReconnect(async () => {
+      this.ensureConnected();
+
+      // Find the file input element
+      let nodeId: number;
+
+      if (selector) {
+        // Use provided selector
+        const doc = await this.client!.DOM.getDocument();
+        const result = await this.client!.DOM.querySelector({
+          nodeId: doc.root.nodeId,
+          selector: selector
+        });
+
+        if (!result.nodeId) {
+          return {
+            success: false,
+            message: `No element found matching selector: ${selector}`,
+            inputFound: false
+          };
+        }
+        nodeId = result.nodeId;
+      } else {
+        // Auto-detect file input - find first visible file input
+        const doc = await this.client!.DOM.getDocument();
+
+        // Try common file input selectors
+        const selectors = [
+          'input[type="file"]:not([disabled])',
+          'input[type="file"]',
+          '[data-testid*="file"] input',
+          '[class*="upload"] input[type="file"]',
+          '[class*="dropzone"] input[type="file"]'
+        ];
+
+        let found = false;
+        for (const sel of selectors) {
+          try {
+            const result = await this.client!.DOM.querySelector({
+              nodeId: doc.root.nodeId,
+              selector: sel
+            });
+            if (result.nodeId) {
+              nodeId = result.nodeId;
+              found = true;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+
+        if (!found) {
+          return {
+            success: false,
+            message: 'No file input element found on the page. Try providing a specific selector.',
+            inputFound: false
+          };
+        }
+      }
+
+      // Set the file on the input element
+      try {
+        await this.client!.DOM.setFileInputFiles({
+          nodeId: nodeId!,
+          files: [filePath]
+        });
+
+        // Trigger change event to notify the page
+        await this.client!.Runtime.evaluate({
+          expression: `
+            (function() {
+              const input = document.querySelector('${selector || 'input[type="file"]'}');
+              if (input) {
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            })();
+          `
+        });
+
+        return {
+          success: true,
+          message: `File uploaded successfully: ${filePath}`,
+          inputFound: true
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          message: `Failed to set file: ${error.message}`,
+          inputFound: true
+        };
+      }
+    });
+  }
+
+  /**
+   * Upload multiple files to a file input element
+   *
+   * @param filePaths - Array of absolute file paths
+   * @param selector - Optional CSS selector for the file input
+   */
+  async uploadFiles(filePaths: string[], selector?: string): Promise<{ success: boolean; message: string }> {
+    return this.withAutoReconnect(async () => {
+      this.ensureConnected();
+
+      const doc = await this.client!.DOM.getDocument();
+      const sel = selector || 'input[type="file"]';
+
+      const result = await this.client!.DOM.querySelector({
+        nodeId: doc.root.nodeId,
+        selector: sel
+      });
+
+      if (!result.nodeId) {
+        return {
+          success: false,
+          message: `No file input found with selector: ${sel}`
+        };
+      }
+
+      try {
+        await this.client!.DOM.setFileInputFiles({
+          nodeId: result.nodeId,
+          files: filePaths
+        });
+
+        // Trigger change event
+        await this.client!.Runtime.evaluate({
+          expression: `
+            (function() {
+              const input = document.querySelector('${sel}');
+              if (input) {
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+              }
+            })();
+          `
+        });
+
+        return {
+          success: true,
+          message: `${filePaths.length} file(s) uploaded successfully`
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          message: `Failed to upload files: ${error.message}`
+        };
+      }
+    });
+  }
+
+  /**
+   * Check if the current page has any file inputs
+   */
+  async hasFileInput(): Promise<{ found: boolean; count: number; selectors: string[] }> {
+    return this.withAutoReconnect(async () => {
+      this.ensureConnected();
+
+      const result = await this.client!.Runtime.evaluate({
+        expression: `
+          (function() {
+            const inputs = document.querySelectorAll('input[type="file"]');
+            const selectors = [];
+            inputs.forEach((input, i) => {
+              let sel = 'input[type="file"]';
+              if (input.id) sel = '#' + input.id;
+              else if (input.name) sel = 'input[name="' + input.name + '"]';
+              else if (input.className) sel = 'input[type="file"].' + input.className.split(' ')[0];
+              selectors.push(sel);
+            });
+            return { count: inputs.length, selectors };
+          })();
+        `,
+        returnByValue: true
+      });
+
+      const data = result.result.value as { count: number; selectors: string[] };
+      return {
+        found: data.count > 0,
+        count: data.count,
+        selectors: data.selectors
+      };
+    });
+  }
+
+  /**
+   * Click on a file input to potentially trigger a file picker dialog
+   * Note: This won't actually open a native dialog in headless mode,
+   * but can trigger custom file picker UIs
+   */
+  async clickFileInput(selector?: string): Promise<{ success: boolean; message: string }> {
+    return this.withAutoReconnect(async () => {
+      this.ensureConnected();
+
+      const sel = selector || 'input[type="file"]';
+
+      const result = await this.client!.Runtime.evaluate({
+        expression: `
+          (function() {
+            const input = document.querySelector('${sel}');
+            if (input) {
+              input.click();
+              return { clicked: true };
+            }
+            return { clicked: false };
+          })();
+        `,
+        returnByValue: true
+      });
+
+      const data = result.result.value as { clicked: boolean };
+      return {
+        success: data.clicked,
+        message: data.clicked ? 'File input clicked' : 'No file input found to click'
+      };
+    });
+  }
 }
 
 export const cometClient = new CometCDPClient();

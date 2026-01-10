@@ -50,7 +50,7 @@ This is a significantly enhanced fork of [hanzili/comet-mcp](https://github.com/
 | Capability | Original | Enhanced |
 |------------|----------|----------|
 | Platform Support | macOS | Windows, WSL, macOS |
-| Available Tools | 6 | 7 (+comet_tabs) |
+| Available Tools | 6 | 8 (+comet_tabs, +comet_upload) |
 | Completion Detection | Fixed timeout | Stability-based |
 | Connection Recovery | None | Auto-reconnect with backoff |
 | Tab Management | None | Full registry and control |
@@ -263,6 +263,45 @@ Returns: Current mode or confirmation of switch
 | research | Deep, comprehensive analysis |
 | labs | Data analytics and visualization |
 | learn | Educational explanations |
+
+---
+
+### comet_upload
+
+Upload files to file input elements on web pages. Essential for posting images to social media, attaching files to forms, or uploading documents.
+
+```
+Parameters:
+  - filePath (required): Absolute path to the file to upload
+  - selector (optional): CSS selector for specific file input
+  - checkOnly (optional): If true, only checks what file inputs exist
+
+Returns: Success message or error with available inputs
+```
+
+**Examples:**
+
+```
+# Upload an image to the first file input found
+> comet_upload filePath="/home/user/screenshot.png"
+File uploaded successfully: /home/user/screenshot.png
+
+# Check what file inputs exist on the page
+> comet_upload filePath="dummy" checkOnly=true
+Found 2 file input(s) on the page:
+  1. #image-upload
+  2. input[name="attachment"]
+
+# Upload to a specific input
+> comet_upload filePath="/home/user/doc.pdf" selector="#attachment-input"
+File uploaded successfully: /home/user/doc.pdf
+```
+
+**Workflow for posting images:**
+1. Navigate to the post creation page (e.g., Reddit, Twitter)
+2. Use `comet_upload checkOnly=true` to find file inputs
+3. Use `comet_upload filePath="..." selector="..."` to attach the file
+4. Continue with form submission
 
 ---
 

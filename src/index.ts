@@ -84,10 +84,32 @@ const TOOLS: Tool[] = [
       },
     },
   },
+  {
+    name: "comet_upload",
+    description: "Upload a file to a file input on the current page. Use this to attach images, documents, or other files to forms, posts, or upload dialogs. The file must exist on the local filesystem.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        filePath: {
+          type: "string",
+          description: "Absolute path to the file to upload (e.g., '/home/user/image.png' or 'C:\\Users\\user\\image.png')",
+        },
+        selector: {
+          type: "string",
+          description: "Optional CSS selector for the file input element. If not provided, auto-detects the first file input on the page.",
+        },
+        checkOnly: {
+          type: "boolean",
+          description: "If true, only checks if file inputs exist on the page without uploading",
+        },
+      },
+      required: ["filePath"],
+    },
+  },
 ];
 
 const server = new Server(
-  { name: "comet-bridge", version: "2.4.0" },
+  { name: "comet-bridge", version: "2.5.0" },
   { capabilities: { tools: {} } }
 );
 
@@ -621,6 +643,54 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             content: [{ type: "text", text: `Failed to switch mode: ${clickResult.error}` }],
             isError: true,
           };
+        }
+      }
+
+      case "comet_upload": {
+        const filePath = args?.filePath as string;
+        const selector = args?.selector as string | undefined;
+        const checkOnly = args?.checkOnly as boolean | undefined;
+
+        if (!filePath) {
+          return { content: [{ type: "text", text: "Error: filePath is required" }], isError: true };
+        }
+
+        // Check if file exists
+        const fs = await import('fs');
+        if (!fs.existsSync(filePath)) {
+          return { content: [{ type: "text", text: `Error: File not found: ${filePath}` }], isError: true };
+        }
+
+        // If checkOnly, just report what file inputs exist
+        if (checkOnly) {
+          const inputInfo = await cometClient.hasFileInput();
+          if (inputInfo.found) {
+            let msg = `Found ${inputInfo.count} file input(s) on the page:\n`;
+            msg += inputInfo.selectors.map((s, i) => `  ${i + 1}. ${s}`).join('\n');
+            msg += `\n\nUse comet_upload with filePath to upload to one of these inputs.`;
+            return { content: [{ type: "text", text: msg }] };
+          } else {
+            return { content: [{ type: "text", text: "No file input elements found on the current page. Navigate to a page with a file upload form first." }] };
+          }
+        }
+
+        // Perform the upload
+        const result = await cometClient.uploadFile(filePath, selector);
+
+        if (result.success) {
+          return { content: [{ type: "text", text: result.message }] };
+        } else {
+          // If no input found, provide helpful info
+          if (!result.inputFound) {
+            const inputInfo = await cometClient.hasFileInput();
+            let msg = result.message;
+            if (inputInfo.found) {
+              msg += `\n\nAvailable file inputs:\n${inputInfo.selectors.map((s, i) => `  ${i + 1}. ${s}`).join('\n')}`;
+              msg += `\n\nTry specifying a selector parameter.`;
+            }
+            return { content: [{ type: "text", text: msg }], isError: true };
+          }
+          return { content: [{ type: "text", text: result.message }], isError: true };
         }
       }
 
