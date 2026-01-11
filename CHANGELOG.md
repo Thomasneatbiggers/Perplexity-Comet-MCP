@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.6.2] - 2026-01-11
+
+### Fixed
+
+- **WSL Support Complete** - Fixed `windowsFetch` to use PowerShell on WSL (was incorrectly using native fetch which connects to WSL localhost instead of Windows)
+- **Tab Cleanup Crash** - Removed aggressive tab cleanup in `comet_connect` that was closing tabs and crashing Comet browser
+- **WSL Networking Detection** - Added automatic detection of WSL mirrored networking with helpful error message and setup instructions
+
+### Added
+
+- **WSL Mirrored Networking Guide** - Clear instructions in error messages for enabling WSL2 mirrored networking
+- **WSL Troubleshooting Docs** - Added WSL-specific troubleshooting section to README
+
+### Changed
+
+- Simplified `comet_connect` to preserve all existing tabs instead of cleaning up blank tabs
+
+## [2.6.1] - 2026-01-10
+
+### Fixed
+
+- WSL browser launching via PowerShell with `Set-Location` to avoid UNC path issues
+
+## [2.6.0] - 2026-01-10
+
+### Added
+
+- **File Upload Support** - New `comet_upload` tool for uploading files to web forms
+- Major stability improvements
+
 ## [2.4.0] - 2026-01-10
 
 ### Added
